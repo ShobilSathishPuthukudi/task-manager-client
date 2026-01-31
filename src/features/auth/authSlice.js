@@ -1,20 +1,15 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { logout } from "../../api/authService";
-import { registerUser, loginUser } from "../auth/authThunk.js";
-import { act } from "react";
-
-const user = JSON.parse(localStorage.getItem("user"));
 
 const initialState = {
-  user: user || null,
-  isLoading: false,
-  isSuccess: false,
-  isError: false,
+  user: null,
+  isAuthenticated: false,
+  loading: false,
   message: "",
-  fieldErrors: {},
+  fieldErrors: [],
 };
 
 const formatErrors = (errors) => {
+  console.log("called");
   const formatted = {};
 
   errors?.forEach((err) => {
@@ -31,53 +26,71 @@ const formatErrors = (errors) => {
 const authSlice = createSlice({
   name: "auth",
   initialState,
-  reducers: {
-    reset: (state) => {
-      state.isLoading = false;
-      state.isSuccess = false;
-      state.isError = false;
-      state.message = "";
-      state.fieldErrors = "";
-    },
 
-    logoutUser: (state) => {
-      state.user = null;
-      logout();
-    },
-  },
+  reducers: {},
 
   extraReducers: (builder) => {
     builder
       .addCase(loginUser.pending, (state) => {
-        state.isLoading = true;
+        state.loading = true;
+        state.fieldErrors = [];
       })
-      .addCase(loginUser.fullfilled, (state, actions) => {
-        state.isLoading = false;
-        state.isSuccess = true;
-        state.user = actions.payload;
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.loading = false;
+        const { user } = action.payload.data;
+
+        state.user = user;
+
+        state.isAuthenticated = true;
+
+        api.defaults.headers.common["Authorization"] =
+          `Bearer ${user.accessToken}`;
       })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.isError = true;
-        state.message = action.payload.message;
-        state.fieldErrors = formatErrors(action.payload.errors);
+      .addCase(loginUser.rejected, (state, payload) => {
+        state.loading = false;
+        state.message = payload.message;
+        state.fieldErrors = formatErrors(payload.errors);
       })
+
       .addCase(registerUser.pending, (state) => {
-        state.isLoading = true;
+        state.loading = true;
+        state.fieldErrors = [];
       })
-      .addCase(registerUser.fullfilled, (state, actions) => {
-        state.isLoading = false;
-        state.isSuccess = true;
-        state.user = actions.payload;
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.loading = false;
+        const { user } = action.payload.data;
+
+        state.user = user;
+
+        state.isAuthenticated = true;
+
+        api.defaults.headers.common["Authorization"] =
+          `Bearer ${user.accessToken}`;
       })
-      .addCase(registerUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.isError = true;
-        state.message = action.payload.message;
-        state.fieldErrors = formatErrors(action.payload.errors);
+      .addCase(registerUser.rejected, (state, payload) => {
+        state.loading = false;
+        state.message = payload.message;
+        state.fieldErrors = formatErrors(payload.errors);
+      })
+
+      .addCase(getMe.fulfilled, (state, action) => {
+        const { user } = action.payload.data;
+
+        state.user = user;
+
+        state.isAuthenticated = true;
+
+        api.defaults.headers.common["Authorization"] =
+          `Bearer ${user.accessToken}`;
+      })
+      .addCase(logout.fulfilled, (state, action) => {
+        state.user = null;
+
+        state.isAuthenticated = false;
+
+        delete api.defaults.headers.common["Authorization"];
       });
   },
 });
 
-export const { reset, logoutUser } = authSlice.actions;
 export default authSlice.reducer;
