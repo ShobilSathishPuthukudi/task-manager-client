@@ -2,7 +2,7 @@ import { BrowserRouter } from "react-router-dom";
 import AuthRoutes from "./routes/AuthRoutes.jsx";
 import { useDispatch } from "react-redux";
 import { useEffect } from "react";
-import { getCurrentUser } from "./features/auth/authThunk.js";
+import { getCurrentUser } from "./features/auth/authSlice.js";
 
 const App = () => {
   const dispatch = useDispatch();

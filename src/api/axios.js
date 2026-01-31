@@ -1,13 +1,14 @@
 import axios from "axios";
-import store from "../app/store.js";
-import { updateToken } from "../features/auth/authSlice.js";
+// import store from "../app/store.js";
+import { updateToken, logout } from "../features/auth/authSlice.js";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
+  const { default: store } = await import("../app/store.js");
   const state = store.getState();
   const token = state.auth.token;
 
@@ -26,13 +27,15 @@ api.interceptors.response.use(
     if (
       error.response &&
       error.response.status === 401 &&
-      !originalRequest._retry
+      !originalRequest._retry &&
+      !originalRequest.url.includes("/auth/login") &&
+      !originalRequest.url.includes("/auth/register") &&
+      !originalRequest.url.includes("/auth/refresh")
     ) {
       originalRequest._retry = true;
 
       try {
         const response = await api.post("/auth/refresh");
-
         const token = response.data.accessToken;
 
         if (token) {
@@ -47,6 +50,9 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (error) {
         store.dispatch(logout());
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
 
         return Promise.reject(error);
       }
