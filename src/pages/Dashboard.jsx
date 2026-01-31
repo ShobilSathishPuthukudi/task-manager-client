@@ -1,13 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../features/auth/authSlice";
+import { clearTaskError, getTasks } from "../features/task/taskSlice";
 
 const Dashboard = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { tasks, isLoading, message, errors } = useSelector(
+    (state) => state.tasks,
+  );
+
+  useEffect(() => {
+    dispatch(getTasks());
+  }, []);
+
+  useEffect(() => {
+    if (message) {
+      setTimeout(() => {
+        dispatch(clearTaskError());
+      }, 3000);
+    }
+  }, [message]);
 
   const onLogout = () => {
     dispatch(logout());
@@ -16,90 +32,110 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
-      {/* --- Sidebar --- */}
+      {/* ================= SIDEBAR ================= */}
       <aside
         className={`${isSidebarOpen ? "w-64" : "w-20"} bg-gray-900 transition-all duration-300 flex flex-col`}
       >
         <div className="p-6 flex items-center gap-4">
-          <div className="h-8 w-8 bg-red-500 rounded-lg flex-shrink-0"></div>
+          <div className="h-8 w-8 bg-red-500 rounded-lg"></div>
           {isSidebarOpen && (
-            <span className="text-white text-xl font-bold tracking-tight">
-              Taskify
-            </span>
+            <span className="text-white text-xl font-bold">Taskify</span>
           )}
         </div>
 
         <nav className="flex-grow px-4 mt-4 space-y-2">
           <NavItem icon="🏠" label="Dashboard" active isOpen={isSidebarOpen} />
           <NavItem icon="📝" label="My Tasks" isOpen={isSidebarOpen} />
-          <NavItem icon="⭐" label="Important" isOpen={isSidebarOpen} />
-          <NavItem icon="✅" label="Completed" isOpen={isSidebarOpen} />
+          <NavItem icon="🗑️" label="Trash" isOpen={isSidebarOpen} />
         </nav>
 
-        {/* User Profile / Logout Section */}
         <div className="p-4 border-t border-gray-800">
           <button
             onClick={onLogout}
-            className="flex items-center gap-4 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl transition-all"
+            className="flex items-center gap-4 w-full p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl"
           >
             <span className="text-xl">🚪</span>
-            {isSidebarOpen && <span className="font-medium">Logout</span>}
+            {isSidebarOpen && <span>Logout</span>}
           </button>
         </div>
       </aside>
 
-      {/* --- Main Content --- */}
+      {/* ================= MAIN ================= */}
       <main className="flex-grow flex flex-col overflow-hidden">
-        {/* Header */}
+        {/* HEADER */}
         <header className="h-16 bg-white border-b flex items-center justify-between px-8">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!isSidebarOpen)}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500"
             >
               ☰
             </button>
-            <h1 className="text-lg font-semibold text-gray-800">
+
+            <h1 className="text-lg font-semibold">
               Welcome, {user?.name || "User"}!
             </h1>
           </div>
-
-          <div className="flex items-center gap-4">
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              className="hidden md:block bg-gray-100 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 w-64"
-            />
-            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center border-2 border-red-200">
-              <span className="text-red-600 font-bold">U</span>
-            </div>
-          </div>
         </header>
 
-        {/* Content Area */}
+        {/* ================= CONTENT ================= */}
         <section className="p-8 overflow-y-auto">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Today's Overview
-              </h2>
-              <button className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-xl font-semibold transition-colors shadow-lg shadow-red-200">
+          <div className="max-w-6xl mx-auto">
+            {/* TITLE + BUTTON */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">My Tasks</h2>
+
+              <button className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-xl">
                 + New Task
               </button>
             </div>
 
-            {/* Placeholder for Task Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="h-2 w-12 bg-red-400 rounded mb-4"></div>
-                <h3 className="font-bold text-lg mb-2 text-gray-800">
-                  Complete UI Design
-                </h3>
-                <p className="text-gray-500 text-sm">
-                  Design the dashboard for the task management app...
-                </p>
+            {/* ERROR */}
+            {errorMessage && (
+              <div className="bg-red-100 text-red-600 p-3 rounded mb-4">
+                {errorMessage}
               </div>
-              {/* Add more cards here */}
+            )}
+
+            {/* LOADING */}
+            {loading && (
+              <p className="text-center text-gray-500">Loading tasks...</p>
+            )}
+
+            {/* EMPTY STATE */}
+            {!loading && tasks.length === 0 && (
+              <p className="text-center text-gray-400">No tasks found.</p>
+            )}
+
+            {/* TASK GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {tasks.map((task) => (
+                <div
+                  key={task._id}
+                  className="p-6 bg-white rounded-2xl border shadow-sm hover:shadow-md transition"
+                >
+                  <div className="h-2 w-12 bg-red-400 rounded mb-3"></div>
+
+                  <h3 className="font-bold text-lg">{task.title}</h3>
+
+                  <p className="text-gray-500 text-sm mt-1">
+                    {task.description}
+                  </p>
+
+                  <div className="flex justify-end gap-3 mt-4">
+                    <button className="text-blue-600 hover:underline">
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => dispatch(deleteTask(task._id))}
+                      className="text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -108,17 +144,18 @@ const Dashboard = () => {
   );
 };
 
-// Simple NavItem Component for cleaner code
+// ================= NAV ITEM =================
+
 const NavItem = ({ icon, label, active = false, isOpen }) => (
   <div
-    className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all ${
+    className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer ${
       active
         ? "bg-red-500 text-white"
         : "text-gray-400 hover:bg-gray-800 hover:text-white"
     }`}
   >
     <span className="text-xl">{icon}</span>
-    {isOpen && <span className="font-medium">{label}</span>}
+    {isOpen && <span>{label}</span>}
   </div>
 );
 
