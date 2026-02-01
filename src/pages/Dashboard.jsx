@@ -27,7 +27,11 @@ const Dashboard = () => {
 
   const onLogout = () => {
     dispatch(logout());
-    navigate("/login");
+    navigate("/auth/login");
+  };
+
+  const onNewTask = () => {
+    navigate("/tasks/create");
   };
 
   return (
@@ -36,6 +40,7 @@ const Dashboard = () => {
       <aside
         className={`${isSidebarOpen ? "w-64" : "w-20"} bg-gray-900 transition-all duration-300 flex flex-col`}
       >
+        {/* Logo Area */}
         <div className="p-6 flex items-center gap-4">
           <div className="h-8 w-8 bg-red-500 rounded-lg"></div>
           {isSidebarOpen && (
@@ -43,6 +48,7 @@ const Dashboard = () => {
           )}
         </div>
 
+        {/* Desktop Navigation Items */}
         <nav className="flex-grow px-4 mt-4 space-y-2">
           <NavItem icon="🏠" label="Dashboard" active isOpen={isSidebarOpen} />
           <NavItem icon="📝" label="My Tasks" isOpen={isSidebarOpen} />
@@ -85,25 +91,28 @@ const Dashboard = () => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">My Tasks</h2>
 
-              <button className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-xl">
+              <button
+                onClick={onNewTask}
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-xl"
+              >
                 + New Task
               </button>
             </div>
 
             {/* ERROR */}
-            {errorMessage && (
+            {message && (
               <div className="bg-red-100 text-red-600 p-3 rounded mb-4">
-                {errorMessage}
+                {message}
               </div>
             )}
 
             {/* LOADING */}
-            {loading && (
+            {isLoading && (
               <p className="text-center text-gray-500">Loading tasks...</p>
             )}
 
             {/* EMPTY STATE */}
-            {!loading && tasks.length === 0 && (
+            {!isLoading && tasks.length === 0 && (
               <p className="text-center text-gray-400">No tasks found.</p>
             )}
 

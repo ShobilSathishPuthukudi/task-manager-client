@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios.js";
+import { getToken, setToken, removeToken } from "../../utils/handleToken.js";
 
 const register = createAsyncThunk(
   "auth/register",
@@ -59,10 +60,10 @@ const trasnformErrors = (errorsArray) => {
 
 const initialState = {
   user: null,
-  token: null,
-  isAuthenticated: false,
+  token: getToken() || null,
+  isAuthenticated: !!getToken(),
   isSuccess: false,
-  isLoading: false,
+  isLoading: true,
   isError: null,
   message: "",
   errors: {},
@@ -73,15 +74,13 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     resetState: (state) => {
-      state.isLoading = false;
-      state.isSuccess = false;
-      state.isError = null;
-      state.message = "";
-      state.errors = {};
+      return initialState;
     },
 
     updateToken: (state, action) => {
       state.token = action.payload;
+      state.isAuthenticated = true;
+      setToken(action.payload);
     },
   },
 
@@ -96,6 +95,7 @@ const authSlice = createSlice({
         state.user = action.payload.data;
         state.token = action.payload.data.accessToken;
         state.isAuthenticated = true;
+        setToken(action.payload.data.accessToken);
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
@@ -112,6 +112,7 @@ const authSlice = createSlice({
         state.user = action.payload.data;
         state.token = action.payload.data.accessToken;
         state.isAuthenticated = true;
+        setToken(action.payload.data.accessToken);
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -138,7 +139,10 @@ const authSlice = createSlice({
       })
 
       .addCase(logout.fulfilled, (state) => {
-        return initialState;
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        removeToken();
       })
       .addCase(logout.rejected, (state, action) => {
         return initialState;

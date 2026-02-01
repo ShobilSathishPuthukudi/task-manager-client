@@ -1,11 +1,11 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../api/axios.js";
 
 const getTasks = createAsyncThunk(
   "tasks/get",
   async (queryParams = "", thunkApi) => {
     try {
-      const response = await axios.get(`/tasks${queryParams}`);
+      const response = await api.get(`/tasks?${queryParams}`);
       return response.data;
     } catch (error) {
       const message = error.response?.data?.message || "Fetching tasks failed";
@@ -19,7 +19,7 @@ const createTask = createAsyncThunk(
   "tasks/create",
   async (taskData, thunkApi) => {
     try {
-      const response = await axios.post("/tasks", taskData);
+      const response = await api.post("/tasks", taskData);
       return response.data;
     } catch (error) {
       const message = error.response?.data?.message || "Failed to create task";
@@ -33,7 +33,7 @@ const updateTask = createAsyncThunk(
   "task/update",
   async ({ id, taskData }, thunkApi) => {
     try {
-      const response = await axios.patch(`/tasks/${id}`, taskData);
+      const response = await api.patch(`/tasks/${id}`, taskData);
       return response.data;
     } catch (error) {
       const message = error.response?.data?.message || "Failed to update task";
@@ -45,7 +45,7 @@ const updateTask = createAsyncThunk(
 
 const deleteTask = createAsyncThunk("tasks/delete", async (id, thunkApi) => {
   try {
-    const response = await axios.delete(`/tasks/${id}`);
+    const response = await api.delete(`/tasks/${id}`);
     return response.data;
   } catch (error) {
     const message = error.response?.data?.message || "Failed to delete task";
@@ -58,7 +58,7 @@ const getTrashTasks = createAsyncThunk(
   "tasks/trash/get",
   async (_, thunkApi) => {
     try {
-      const response = await axios.get("/tasks/trash");
+      const response = await api.get("/tasks/trash");
       return response.data;
     } catch (error) {
       const message =
@@ -71,7 +71,7 @@ const getTrashTasks = createAsyncThunk(
 
 const restoreTask = createAsyncThunk("tasks/restore", async (id, thunkApi) => {
   try {
-    const response = await axios.patch(`tasks/${id}/restore`);
+    const response = await api.patch(`tasks/${id}/restore`);
     return response.data;
   } catch (error) {
     const message = error.response?.data?.message || "Failed to restore task";
@@ -84,7 +84,7 @@ const permanentlyDeleteTask = createAsyncThunk(
   "tasks/permanent/delete",
   async (id, thunkApi) => {
     try {
-      const response = await axios.delete(`tasks/${id}/permanent`);
+      const response = await api.delete(`tasks/${id}/permanent`);
       return response.data;
     } catch (error) {
       const message =
@@ -99,7 +99,7 @@ const emptyTrash = createAsyncThunk(
   "tasks/trash/empty",
   async (_, thunkApi) => {
     try {
-      const response = await axios.delete(`tasks/trash/empty`);
+      const response = await api.delete(`tasks/trash/empty`);
       return response.data;
     } catch (error) {
       const message = error.response?.data?.message || "Emoty trash failed";
@@ -122,25 +122,23 @@ const taskSlice = createSlice({
   name: "tasks",
   initialState,
   reducers: {
+    clearTask: (state) => {
+      return initialState;
+    },
     clearTaskError: (state) => {
-      state.errors = {};
+      state.isError = false;
       state.message = null;
+      state.errors = [];
     },
   },
   extraReducers: (builder) => {
     builder
-      .addMatcher(
-        (action) => action.type.endsWith("/pending"),
-        (state) => {
-          state.isLoading = true;
-        },
-      )
       .addCase(getTasks.fulfilled, (state, action) => {
         state.isLoading = false;
         state.tasks = action.payload.data;
       })
       .addCase(createTask.fulfilled, (state, action) => {
-        state.loading = false;
+        state.isLoading = false;
         state.tasks.unshift(action.payload.data);
       })
       .addCase(updateTask.fulfilled, (state, action) => {
@@ -151,17 +149,16 @@ const taskSlice = createSlice({
         );
 
         if (index !== -1) {
-          state.tasks[index] = updateTask;
+          state.tasks[index] = action.payload.data;
         }
       })
 
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.isLoading = false;
-
-        const taskToDelete = action.patch.data;
+        const taskToDelete = action.payload.data;
 
         state.tasks = state.tasks.filter(
-          (task) => task.id !== taskToDelete._id,
+          (task) => task._id !== taskToDelete._id,
         );
 
         state.trashTasks.unshift(taskToDelete);
@@ -191,18 +188,27 @@ const taskSlice = createSlice({
         state.trashTasks = [];
       })
       .addMatcher(
-        (action) => action.type.endsWith("/rejected"),
+        (action) => action.type.endsWith("/pending"),
         (state) => {
+          state.isLoading = true;
+          state.isError = false;
+          state.message = null;
+        },
+      )
+      .addMatcher(
+        (action) => action.type.endsWith("/rejected"),
+        (state, action) => {
           state.isLoading = false;
+          state.isError = true;
           state.message =
-            action.payload.data.message || "Error occured, Try again later.";
-          state.errors = action.payload.data.errors || [];
+            action.payload.message || "Error occured, Try again later.";
+          state.errors = action.payload.errors || [];
         },
       );
   },
 });
 
-export const { clearTaskError } = taskSlice.actions;
+export const { clearTask, clearTaskError } = taskSlice.actions;
 export default taskSlice.reducer;
 export {
   getTasks,

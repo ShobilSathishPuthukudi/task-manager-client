@@ -1,6 +1,8 @@
 import axios from "axios";
-// import store from "../app/store.js";
 import { updateToken, logout } from "../features/auth/authSlice.js";
+import { resetState } from "../features/auth/authSlice.js";
+import { clearTask } from "../features/task/taskSlice.js";
+import { setToken, getToken, removeToken } from "../utils/handleToken.js";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
@@ -8,14 +10,10 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const { default: store } = await import("../app/store.js");
-  const state = store.getState();
-  const token = state.auth.token;
-
+  const token = getToken();
   if (token) {
-    config.headers["Authorization"] = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 });
 
@@ -24,40 +22,35 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (
-      error.response &&
-      error.response.status === 401 &&
-      !originalRequest._retry &&
-      !originalRequest.url.includes("/auth/login") &&
-      !originalRequest.url.includes("/auth/register") &&
-      !originalRequest.url.includes("/auth/refresh")
-    ) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (originalRequest.url.includes("/auth/refresh")) {
+        removeToken();
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       try {
-        const response = await api.post("/auth/refresh");
-        const token = response.data.accessToken;
+        const refreshResponse = await api.get("/auth/refresh", {
+          withCredentials: true,
+        });
+        const { newAccessToken } = refreshResponse.data;
 
-        if (token) {
-          store.dispatch(updateToken(token));
+        setToken(newAccessToken);
 
-          originalRequest.headers["Authorization"] =
-            `Bearer ${response.data.accessToken}`;
+        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
 
-          api.defaults.headers.common["Authorization"] =
-            `Bearer ${response.data.accessToken}`;
-        }
         return api(originalRequest);
       } catch (error) {
-        store.dispatch(logout());
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
+        // store.dispatch(resetState());
+        // store.dispatch(clearTask());
+        removeToken();
+        if (window.location.pathname !== "/auth/login") {
+          window.location.href = "/auth/login";
         }
-
         return Promise.reject(error);
       }
     }
-
     return Promise.reject(error);
   },
 );

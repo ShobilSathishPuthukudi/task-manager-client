@@ -24,7 +24,7 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const onChange = (e) => {
+  const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -77,7 +77,7 @@ const Login = () => {
                 id="email"
                 autoComplete="email"
                 value={email}
-                onChange={onChange}
+                onChange={handleChange}
                 placeholder="Enter your email"
                 required
               />
@@ -103,7 +103,7 @@ const Login = () => {
                 name="password"
                 id="password"
                 value={password}
-                onChange={onChange}
+                onChange={handleChange}
                 placeholder="••••••••"
                 required
               />
@@ -144,7 +144,7 @@ const Login = () => {
           <p className="text-center mt-8 text-gray-600">
             New to Taskify?
             <button
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/auth/register")}
               className="ml-2 text-red-600 font-bold hover:underline"
             >
               Sign up
