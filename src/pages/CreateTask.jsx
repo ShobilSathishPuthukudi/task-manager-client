@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createTask } from "../features/task/taskSlice";
+import { useNavigate } from "react-router-dom";
 
 const CreateTask = () => {
   const dispatch = useDispatch();
-  const { isLoading } = useSelector((state) => state.tasks);
+  const navigate = useNavigate();
+
+  const { isLoading, message, errors } = useSelector((state) => state.tasks);
   const initialFormData = {
     title: "",
     description: "",
@@ -27,23 +30,31 @@ const CreateTask = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = {
-      title: formData.title,
-      description: formData.description,
-      priority: formData.priority,
-      status: formData.status,
-      dueDate: formData.dueDate,
-      tags: formData.tags ? formData.split(",").map((t) => t.trim()) : [],
-      isRecurring: formData.isRecurring,
-      recurrring: formData.isRecurring
-        ? { pattern: formData.pattern, interval: formData.interval }
-        : undefined,
-    };
 
-    dispatch(createTask(payload));
-    setFormData(initialFormData);
+    try {
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        status: formData.status,
+        dueDate: formData.dueDate,
+        tags: formData.tags
+          ? formData.tags.split(",").map((t) => t.trim())
+          : [],
+        isRecurring: formData.isRecurring,
+        recurrring: formData.isRecurring
+          ? { pattern: formData.pattern, interval: formData.interval }
+          : undefined,
+      };
+
+      await dispatch(createTask(payload)).unwrap();
+      setFormData(initialFormData);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Task Creation Error:", error);
+    }
   };
 
   return (
@@ -53,6 +64,19 @@ const CreateTask = () => {
         className="bg-gray-800 p-6 rounded-lg w-full max-w-lg space-y-4"
       >
         <h2 className="text-white text-xl font-bold">Create Task</h2>
+
+        {message && (
+          <div className="bg-red-500/20 border border-red-500 text-red-500 p-3 rounded-lg text-sm">
+            {message}
+            {errors && errors.length > 0 && (
+              <ul className="mt-2 list-disc list-inside">
+                {errors.map((err, index) => (
+                  <li key={index}>{err.message}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* TITLE */}
         <input

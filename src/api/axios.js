@@ -42,8 +42,6 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (error) {
-        // store.dispatch(resetState());
-        // store.dispatch(clearTask());
         removeToken();
         if (window.location.pathname !== "/auth/login") {
           window.location.href = "/auth/login";

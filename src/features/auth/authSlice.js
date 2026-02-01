@@ -136,6 +136,7 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state.token = null;
+        removeToken();
       })
 
       .addCase(logout.fulfilled, (state) => {
@@ -145,7 +146,11 @@ const authSlice = createSlice({
         removeToken();
       })
       .addCase(logout.rejected, (state, action) => {
-        return initialState;
+        state.isLoading = false;
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        removeToken();
       });
   },
 });
